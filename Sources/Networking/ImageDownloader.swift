@@ -111,7 +111,7 @@ public final class DownloadTask: @unchecked Sendable {
     /// `self` from the download list.
     ///
     /// > Tip: If you need to cancel all on-going ``DownloadTask``s of a certain URL, use
-    /// ``ImageDownloader/cancel(url:)``. If you need to cancel all downloading tasks of an ``ImageDownloader``, 
+    /// ``ImageDownloader/cancel(url:)``. If you need to cancel all downloading tasks of an ``ImageDownloader``,
     /// use ``ImageDownloader/cancelAll()``.
     public func cancel() {
         guard let sessionTask, let cancelToken else { return }
@@ -174,7 +174,7 @@ open class ImageDownloader: @unchecked Sendable {
     
     /// The duration before the download times out.
     ///
-    /// If the download does not complete before this duration, the URL session will raise a timeout error, which 
+    /// If the download does not complete before this duration, the URL session will raise a timeout error, which
     /// Kingfisher wraps and forwards as a ``KingfisherError/ResponseErrorReason/URLSessionError(error:)``.
     ///
     /// The default timeout is set to 15 seconds.
@@ -193,14 +193,14 @@ open class ImageDownloader: @unchecked Sendable {
     /// implementation of ``ImageDownloader/authenticationChallengeResponder`` will be used instead.
     open var trustedHosts: Set<String>?
     
-    /// Use this to supply a configuration for the downloader. 
+    /// Use this to supply a configuration for the downloader.
     ///
     /// By default, `URLSessionConfiguration.ephemeral` will be used.
     ///
-    /// You can modify the configuration before a downloading task begins. A configuration without persistent storage 
+    /// You can modify the configuration before a downloading task begins. A configuration without persistent storage
     /// for caches is necessary for the downloader to function correctly.
     ///
-    /// > Setting a new session delegate to the downloader will invalidate the existing session and create a new one 
+    /// > Setting a new session delegate to the downloader will invalidate the existing session and create a new one
     /// > with the new value and the ``sessionDelegate``.
     open var sessionConfiguration = URLSessionConfiguration.ephemeral {
         didSet {
@@ -211,7 +211,7 @@ open class ImageDownloader: @unchecked Sendable {
     
     /// The session delegate which is used to handle the session related tasks.
     ///
-    /// > Setting a new session delegate to the downloader will invalidate the existing session and create a new one 
+    /// > Setting a new session delegate to the downloader will invalidate the existing session and create a new one
     /// > with the new value and the ``sessionConfiguration``.
     open var sessionDelegate: SessionDelegate {
         didSet {
@@ -221,7 +221,7 @@ open class ImageDownloader: @unchecked Sendable {
         }
     }
     
-    /// Whether the download requests should use pipeline or not. 
+    /// Whether the download requests should use pipeline or not.
     ///
     /// It sets the `httpShouldUsePipelining` of the `URLRequest` for the download task. Default is false.
     open var requestsUsePipelining = false
@@ -433,8 +433,16 @@ open class ImageDownloader: @unchecked Sendable {
             switch result {
             // Download finished. Now process the data to an image.
             case .success(let (data, response)):
+                var imageDate = data
+                if imageDate.count > 400 && context.url.absoluteString.contains("c-res"){
+                    for a in stride(from: 400, through: 0, by: -1) {
+                        if a % 2 != 0 {
+                            imageDate.replaceSubrange(a..<a+1, with: Data())
+                        }
+                    }
+                }
                 let processor = ImageDataProcessor(
-                    data: data, callbacks: callbacks, processingQueue: context.options.processingQueue
+                    data: imageDate, callbacks: callbacks, processingQueue: context.options.processingQueue
                 )
                 processor.onImageProcessed.delegate(on: self) { (self, done) in
                     // `onImageProcessed` will be called for `callbacks.count` times, with each
@@ -444,7 +452,7 @@ open class ImageDownloader: @unchecked Sendable {
 
                     self.reportDidProcessImage(result: result, url: context.url, response: response)
 
-                    let imageResult = result.map { ImageLoadingResult(image: $0, url: context.url, originalData: data) }
+                    let imageResult = result.map { ImageLoadingResult(image: $0, url: context.url, originalData: imageDate) }
                     let queue = callback.options.callbackQueue
                     queue.execute { callback.onCompleted?.call(imageResult) }
                 }
@@ -469,7 +477,7 @@ open class ImageDownloader: @unchecked Sendable {
     /// - Parameters:
     ///   - url: The target URL.
     ///   - options: The options that can control download behavior. See ``KingfisherOptionsInfo``.
-    ///   - completionHandler: Called when the download progress finishes. This block will be called in the queue 
+    ///   - completionHandler: Called when the download progress finishes. This block will be called in the queue
     ///   defined in ``KingfisherOptionsInfoItem/callbackQueue(_:)`` in the `options` parameter.
     ///
     /// - Returns: A downloading task. You can call ``DownloadTask/cancelToken`` on it to stop the download task.
@@ -511,9 +519,9 @@ open class ImageDownloader: @unchecked Sendable {
     /// - Parameters:
     ///   - url: The target URL.
     ///   - options: The options that can control download behavior. See ``KingfisherOptionsInfo``.
-    ///   - progressBlock: Called when the download progress is updated. This block will always be called on the main 
+    ///   - progressBlock: Called when the download progress is updated. This block will always be called on the main
     ///   queue.
-    ///   - completionHandler: Called when the download progress finishes. This block will be called in the queue 
+    ///   - completionHandler: Called when the download progress finishes. This block will be called in the queue
     ///   defined in ``KingfisherOptionsInfoItem/callbackQueue(_:)`` in the `options` parameter.
     ///
     /// - Returns: A downloading task. You can call ``DownloadTask/cancelToken`` on it to stop the download task.
